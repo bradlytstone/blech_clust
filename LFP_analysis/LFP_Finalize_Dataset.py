@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import sys
 import os
+from LFP_IO import *
 
 # =============================================================================
 # #Channel Check Processing
@@ -21,12 +22,10 @@ except:
 
 hdf5_name = glob.glob(dir_name + '/*.h5')[0]
 
-#Open the hdf5 file
-hf5 = tables.open_file(hdf5_name, 'r+')
-parsed_lfp_addr = '/Parsed_LFP'
-taste_num = len([x for x in hf5.list_nodes(parsed_lfp_addr) \
-        if 'dig_in' in str(x)])
-channel_num = hf5.list_nodes(parsed_lfp_addr)[0].shape[0]
+# Extract unflagged LFP from file
+lfp_list = getLFPList(hdf5_name)
+taste_num = len(lfp_list) 
+channel_num = len(lfp_list[0]) 
 
 #Ask user to check LFP traces to ensure channels are not shorted/bad in order to remove said channel from further processing
 try:

@@ -28,65 +28,15 @@ import glob
 
 # 3rd-party libraries
 import numpy as np # module for low-level scientific computing
-#Hilbert transform to determine the amplitude envelope and 
-#instantaneous frequency of an amplitude-modulated signal
-from scipy.signal import hilbert 
-from scipy.signal import butter
-from scipy.signal import filtfilt
-import matplotlib.pyplot as plt # makes matplotlib work like MATLAB. ’pyplot’ functions.
 import easygui
 import tables
 from tqdm import trange
 import pandas as pd
 import collections
 
-# =============================================================================
-# Define functions
-# =============================================================================
-
-#define bandpass filter parameters to parse out frequencies
-def butter_bandpass_filter(data, lowcut, highcut, fs, order=2):
-    nyq = 0.5 * fs
-    low = lowcut /nyq
-    high = highcut/nyq
-    b, a = butter(order, [low, high], btype='bandpass')
-    y = filtfilt(b, a, data)
-    return y
-
-def getFlaggedLFPs(hf5_name):
-
-    # Load flagged channels from HDF5 if present
-    try:
-        flag_frame = pd.read_hdf(hdf5_name,'/Parsed_LFP/flagged_channels')
-        flagged_channel_bool = 1
-    except:
-        print('No flagged channels dataset present. Defaulting to not using flags.')
-        flagged_channel_bool = 0
-
-    #Open the hdf5 file
-    hf5 = tables.open_file(hdf5_name, 'r+')
-
-    # Pull LFPS and spikes
-    # Make sure not taking anything other than a dig_in
-    lfps_dig_in = [node for node in hf5.list_nodes('/Parsed_LFP') if 'dig_in' in str(node)]
-
-    # If flagged channels dataset present
-    if flagged_channel_bool > 0:
-        good_channel_list = [list(flag_frame.\
-                query('Dig_In == {} and Error_Flag == 0'.format(dig_in))['Channel']) \
-                for dig_in in range(len(lfps_dig_in))]
-    else:
-        good_channel_list = [list(flag_frame.\
-                query('Dig_In == {}'.format(dig_in))['Channel']) \
-                for dig_in in range(len(lfps_dig_in))]
-
-    # Load LFPs and remove flagged channels if present
-    lfp_list = [dig_in[:][good_channel_list[dig_in_num],:] \
-        for dig_in_num,dig_in in enumerate(lfps_dig_in)]
-
-    hf5.close()
-
-    return lfp_list
+# Import self-defined functions
+from LFP_process import *
+from LFP_IO import *
 
 # =============================================================================
 # Define common variables
@@ -168,20 +118,6 @@ spikes_frame = pd.DataFrame(data = {'taste':spike_times[0],
                                     'unit':spike_times[2],
                                     'time':spike_times[3]})
 
-# Create array index identifiers
-# Used to convert array to pandas dataframe
-def make_array_identifiers(array):
-    nd_idx_objs = []
-    for dim in range(array.ndim):
-        this_shape = np.ones(len(array.shape))
-        this_shape[dim] = array.shape[dim]
-        nd_idx_objs.append(
-                np.broadcast_to(
-                    np.reshape(
-                        np.arange(array.shape[dim]),
-                                this_shape.astype('int')), 
-                    array.shape).flatten())
-    return nd_idx_objs
 
 # Run through all groups of mean phase, convert to pandas dataframe
 # and concatenate into single dataframe
